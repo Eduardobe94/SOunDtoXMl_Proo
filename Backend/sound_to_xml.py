@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
 import whisper
-from openai import OpenAI, AsyncOpenAI
+from openai import Client, AsyncClient
 from rapidfuzz import fuzz, process
 
 # Configuración básica del logging (puedes ajustarlo según necesites)
@@ -113,8 +113,12 @@ class MoodboardSimple:
         self.segmentos_procesados = []
         logger.info("🔄 Cargando modelo Whisper...")
         self.model = whisper.load_model("small")
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.async_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        # Inicializar los clientes OpenAI
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("No se encontró la API key de OpenAI en las variables de entorno")
+        self.client = Client(api_key=api_key)  # Cliente síncrono para operaciones normales
+        self.async_client = AsyncClient(api_key=api_key)  # Cliente asíncrono para operaciones await
     
     def _create_project_folder(self):
         """Genera un nombre único para la carpeta del proyecto basado en la fecha."""
@@ -364,7 +368,7 @@ Devuelve solo JSON válido siguiendo esta plantilla:
         try:
             system_content = "Eres un director de arte y experto en visuales con amplia experiencia en post-producción. Tu tarea es crear planes visuales extremadamente detallados para cada segmento, especificando exactamente qué tipos de contenido visual se necesitan. Considera el análisis previo del guion y el contexto completo para mantener coherencia visual y narrativa."
             
-            # Llamada asíncrona a GPT-4
+            # Llamada asíncrona a GPT-4 usando el cliente asíncrono
             response = await self.async_client.chat.completions.create(
                 model="gpt-4-turbo-preview",
                 messages=[
